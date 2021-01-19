@@ -41,7 +41,7 @@ class RestrictedApi(commands.Cog):
                 self.websocket = await self.bot.session.ws_connect(
                     botto.config["RESTRICTED_API_URL"]
                 )
-            except aiohttp.ClientConnectorError:
+            except aiohttp.ClientError:
                 logger.exception(
                     "Exception raised in restricted API connection. Retrying in 5 seconds."
                 )
@@ -80,9 +80,10 @@ class RestrictedApi(commands.Cog):
             raise botto.NotConnectedToRestrictedApi
         try:
             await self.websocket.send_str(json.dumps(dict(type=event, **data)))
-        except RuntimeError as exc:
+        except (RuntimeError, ConnectionResetError) as exc:
             # RuntimeError: unable to perform operation on <TCPTransport closed=True reading=False
             # 0x??? >; the handler is closed
+            # ConnectionResetError: Cannot write to closing transport
             self.stop_and_disconnect()
             RestrictedApi.__init__(self, self.bot)
             raise botto.NotConnectedToRestrictedApi from exc
